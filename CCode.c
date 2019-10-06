@@ -1,19 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <pthread.h>
 
 #define TOTAL 10
+#define THREADS 1
+#define MAXSTORE 20
 
+bool check(char* first, char* second);
+void Mapping(char* arr[]);
 void LongestWord(char* arr[]);
 void ShortestWord(char* arr[]);
 void MostCommonWord(char* arr[]);
 
-char *test[TOTAL];
+char *test[TOTAL]; 
 char *longest;
 int longestchar;
 char *shortest;
 int shortestchar;
+char *storage[MAXSTORE];
+int storagecount[MAXSTORE] = {};
 char *most;
 int mostchar;
 
@@ -36,16 +43,61 @@ void *reading(void *arg){
 	// 	printf("%d: %s\n", i, test[i]);
 	// }
 	fclose(pointer_file);
-	LongestWord(test);
-	ShortestWord(test);
-	MostCommonWord(test);
+	Mapping(test);
+	LongestWord(storage);
+	ShortestWord(storage);
+	MostCommonWord(storage);
 	pthread_exit(0);
+}
+
+bool check(char* first, char* second){
+	int firstlen = strlen(first);
+	int secondlen = strlen(second);
+	int found = 1;
+	if (firstlen != secondlen){
+		found = 0;
+	}
+	else{
+		for(int i = 0; i < firstlen; i++){
+			if(first[i] != second[i]){
+				found = 0;
+				break;
+			}
+		}
+	}
+	return found;
+}
+
+void Mapping(char* arr[]){
+	int store = 0;
+	for(int i = 0; i < TOTAL; i++){
+		int found = 0;
+		for(int j = 0; j < store; j++){
+			//printf("storage = %s , arr = %s \n", storage[j],arr[i]);
+			bool value = check(storage[j],arr[i]);
+			if(value){
+				//printf("Currently in %s with %d stored.\n", arr[i], storagecount[j]);
+				storagecount[j]++;
+				//printf("storing %s, count %d \n", arr[i],storagecount[j]);
+				found = 1;
+				break;
+			}
+		}
+		if (found == 0){
+			//printf("Stored: %s Total Stored: %d\n", arr[i], store);
+			storage[store]=arr[i];
+			storagecount[store]++;
+			store++;
+		}
+	}
+	//printf("storage: %d\n", storage);
 }
 
 void LongestWord(char* arr[]){
 	int maxlength = strlen(arr[0]);
 	int maxindex = 0;
-	for(int i = 1; i < TOTAL; i++){
+	for(int i = 1; i < MAXSTORE; i++){
+		if(arr[i] == NULL) break;
 		int length = strlen(arr[i]);
 		if(length > maxlength){
 			maxlength = length;
@@ -59,7 +111,8 @@ void LongestWord(char* arr[]){
 void ShortestWord(char* arr[]){
 	int minlength = strlen(arr[0]);
 	int minindex = 0;
-	for(int i = 1; i < TOTAL; i++){
+	for(int i = 1; i < MAXSTORE; i++){
+		if(arr[i] == NULL) break;
 		int length = strlen(arr[i]);
 		if(length < minlength){
 			minlength = length;
@@ -71,65 +124,45 @@ void ShortestWord(char* arr[]){
 }
 
 void MostCommonWord(char* arr[]){
-	int storage = 0;
-	char *arr2[100];
-	int count[100] = {};
-	for(int i = 0; i < TOTAL; i++){
-		int found = 0;
-		//printf("testing: %s.... \n", val_p[i]);
-		for(int j = 0; j < storage; j++){
-			// char first = *arr[j];
-			// char second = *val_p[i];
-			// printf("i = %d, j = %d \nArray: %s\nValue: %s\n",i,j,arr[j],val_p[i]);
-			// if(first == second){
-			// 	printf("true");
-			// }
-			// else{
-			// 	printf("False: %s != %s\n", arr[j],val_p[i]);
-			// }
-			if(*arr2[j] == *arr[i]){
-				//printf("Count ++ %s\n", val_p[i]);
-				count[j]++;
-				//printf("storing %s, count %d \n", val_p[i],count[j]);
-				found = 1;
-				break;
-			}
-		}
-		if (found == 0){
-			//printf("Stored: %sTotal Stored: %d\n", val_p[i], storage);
-			arr2[storage]=arr[i];
-			count[storage]++;
-			storage++;
-		}
-	}
-	//printf("storage: %d\n", storage);
 	int max = 0;
 	int maxindex = 0;
-	for(int i = 0; i < storage; i++){
-		if(count[i] > max){
-			max = count[i];
+	for(int i = 0; i < MAXSTORE; i++){
+		if(arr[i] == NULL) break;
+		if(storagecount[i] > max){
+			max = storagecount[i];
 			maxindex = i;
 			//printf("Index Max = %d, count = %d\n", i, count[i]);
 		}
 	}
 	//printf("Most: %s", arr[maxindex]);
-	most = arr2[maxindex];
-	mostchar = count[maxindex];
+	most = storage[maxindex];
+	mostchar = storagecount[maxindex];
 }
 
 int main(){
 
 	pthread_t tid[4];
-	//char *test[10] = {"testing","testing","testest","derpy","blgawgaw","aefeawfewa", "fewafa","feafa","feawfaw","efwa"};
-	for(int i = 0; i < 4; i++){
+	//char *test[10] = {"testing","testing","testing","derpy","blgawgaw","aefeawfewa", "fewafa","feafa","feawfaw","efwa"};
+	for(int i = 0; i < THREADS; i++){
 		pthread_create(&tid[i], NULL, reading, "file.txt");
 	}
-	for(int i = 0; i < 4; i++){
+	for(int i = 0; i < THREADS; i++){
 		pthread_join(tid[i],NULL);
 	}
+	// Mapping(test);
+	// LongestWord(storage);
+	// ShortestWord(storage);
+	// MostCommonWord(storage);
 	for(int i = 0; i < TOTAL; i++){
+		if(test[i] == NULL) break;
 		printf("listing: %s \n", test[i]);
 	}
+
+	for(int i = 0; i < MAXSTORE; i++){
+		if(storage[i] == NULL) break;
+		printf("In storage: %s with counts of %d\n", storage[i], storagecount[i]);
+	}
+
 	printf("Longest Word: %s With %d Characters\n", longest, longestchar);
 	printf("Shortest Word: %s With %d Characters\n", shortest, shortestchar);
 	printf("Most Word: %s Appeared %d Times\n", most, mostchar);
