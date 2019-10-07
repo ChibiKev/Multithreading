@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#define TOTAL 10
+#define TOTAL 20000000
 #define THREADS 1
 #define MAXSTORE 20
 
@@ -153,10 +153,10 @@ int main(){
 	// LongestWord(storage);
 	// ShortestWord(storage);
 	// MostCommonWord(storage);
-	for(int i = 0; i < TOTAL; i++){
-		if(test[i] == NULL) break;
-		printf("listing: %s \n", test[i]);
-	}
+	// for(int i = 0; i < TOTAL; i++){
+	// 	if(test[i] == NULL) break;
+	// 	printf("listing: %s \n", test[i]);
+	// }
 
 	for(int i = 0; i < MAXSTORE; i++){
 		if(storage[i] == NULL) break;
