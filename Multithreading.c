@@ -91,8 +91,8 @@ void *Mapping(void *arguments){
             pthread_mutex_lock(&mutex1);
             storagecount[j]++;
             free(test[i]);
-            found = 1;
             pthread_mutex_unlock(&mutex1); 
+            found = 1;
             //printf("storing %s, count %d \n", arr[i],storagecount[j]);
             break;
          }  
