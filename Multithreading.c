@@ -5,13 +5,12 @@
 #include <pthread.h>
 
 #define TOTAL 50000000
-#define THREADS 1
+#define THREADS 2
 #define MAXSTORE 20
 #define BUFSIZE 15
 #define DIVIDED TOTAL/THREADS
 
 bool check(char* first, char* second);
-void Mapping(char* arr[]);
 void LongestWord(char* arr[]);
 void ShortestWord(char* arr[]);
 void MostCommonWord(char* arr[]);
@@ -21,10 +20,17 @@ char *longest;
 int longestchar;
 char *shortest;
 int shortestchar;
+int store;
 char *storage[MAXSTORE];
 int storagecount[MAXSTORE] = {};
 char *most;
 int mostchar;
+pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
+
+struct arg_struct{
+   int arg1;
+   int arg2;
+};
 
 void *reading(void *arg){
    char *val_p = (char *)arg;
@@ -70,29 +76,38 @@ bool check(char* first, char* second){
    return found;
 }
 
-void Mapping(char* arr[]){
-   int store = 0;
-   for(int i = 0; i < TOTAL; i++){
+void *Mapping(void *arguments){
+   struct arg_struct *args = arguments;
+   int firstarg = args -> arg1;
+   int secondarg = args -> arg2;
+   //printf("First Arg %d. Second Arg %d\n", firstarg,secondarg);
+   for(int i = firstarg; i < secondarg; i++){
+      pthread_mutex_lock(&mutex1);
       int found = 0;
       for(int j = 0; j < store; j++){
          //printf("storage = %s , arr = %s \n", storage[j],arr[i]);
-         bool value = check(storage[j],arr[i]);
+         bool value = check(storage[j],test[i]);
          if(value){
             //printf("Currently in %s with %d stored.\n", arr[i], storagecount[j]);
             storagecount[j]++;
-            //printf("storing %s, count %d \n", arr[i],storagecount[j]);
+            free(test[i]);
             found = 1;
-            free(arr[i]);
+            //printf("storing %s, count %d \n", arr[i],storagecount[j]);
             break;
-         }
+         }  
       }
       if (found == 0){
          //printf("Stored: %s Total Stored: %d\n", arr[i], store);
-         storage[store]=arr[i];
+         //pthread_mutex_lock(&mutex1);
+         storage[store]=test[i];
          storagecount[store]++;
          store++;
+         //pthread_mutex_unlock(&mutex1);
       }
+      pthread_mutex_unlock(&mutex1); 
    }
+
+   pthread_exit(0);
    //printf("storage: %d\n", storage);
 }
 
@@ -144,7 +159,7 @@ void MostCommonWord(char* arr[]){
 
 int main(){
    pthread_t fileread;
-   pthread_t tid[4];
+   pthread_t tid[THREADS];
    //char *test[10] = {"testing","testing","testing","derpy","blgawgaw","aefeawfewa", "fewafa","feafa","feawfaw","efwa"};
    pthread_create(&fileread, NULL, reading, "file.txt");
    pthread_join(fileread, NULL);
@@ -154,7 +169,22 @@ int main(){
    // for(int i = 0; i < THREADS; i++){
    //    pthread_join(tid[i],NULL);
    // }
-   Mapping(test);
+   struct arg_struct args;
+   args.arg1 = 0;
+   args.arg2 = DIVIDED;
+   struct arg_struct argss;
+   argss.arg1 = DIVIDED;
+   argss.arg2 = TOTAL;
+
+
+   pthread_mutex_init(&mutex1,NULL);
+   pthread_create(&tid[0], NULL, Mapping, (void *) &args);
+   pthread_create(&tid[1], NULL, Mapping, (void *) &argss);
+
+   for(int i = 0; i < THREADS; i++){
+      pthread_join(tid[i],NULL);
+   }
+   pthread_mutex_destroy(&mutex1);
    LongestWord(storage);
    ShortestWord(storage);
    MostCommonWord(storage);
@@ -167,7 +197,7 @@ int main(){
       if(storage[i] == NULL) break;
       printf("In storage: %s with counts of %d\n", storage[i], storagecount[i]);
    }
-   printf("Divided %d \n",DIVIDED);
+   //printf("Divided %d \n",DIVIDED);
    printf("Longest Word: %s With %d Characters\n", longest, longestchar);
    printf("Shortest Word: %s With %d Characters\n", shortest, shortestchar);
    printf("Most Word: %s Appeared %d Times\n", most, mostchar);
