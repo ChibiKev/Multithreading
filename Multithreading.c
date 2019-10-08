@@ -82,29 +82,30 @@ void *Mapping(void *arguments){
    int secondarg = args -> arg2;
    //printf("First Arg %d. Second Arg %d\n", firstarg,secondarg);
    for(int i = firstarg; i < secondarg; i++){
-      pthread_mutex_lock(&mutex1);
       int found = 0;
       for(int j = 0; j < store; j++){
          //printf("storage = %s , arr = %s \n", storage[j],arr[i]);
          bool value = check(storage[j],test[i]);
          if(value){
             //printf("Currently in %s with %d stored.\n", arr[i], storagecount[j]);
+            pthread_mutex_lock(&mutex1);
             storagecount[j]++;
             free(test[i]);
             found = 1;
+            pthread_mutex_unlock(&mutex1); 
             //printf("storing %s, count %d \n", arr[i],storagecount[j]);
             break;
          }  
       }
       if (found == 0){
          //printf("Stored: %s Total Stored: %d\n", arr[i], store);
-         //pthread_mutex_lock(&mutex1);
+         pthread_mutex_lock(&mutex1);
          storage[store]=test[i];
          storagecount[store]++;
          store++;
-         //pthread_mutex_unlock(&mutex1);
+         pthread_mutex_unlock(&mutex1);
       }
-      pthread_mutex_unlock(&mutex1); 
+      
    }
 
    pthread_exit(0);
