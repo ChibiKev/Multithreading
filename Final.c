@@ -145,8 +145,16 @@ void MostCommonWord(char* arr[]){ // Most Common Word Function
 int main(){
    pthread_t fileread; // Reading Thread
    pthread_t tid[THREADS]; // Thread For Efficiency
-   pthread_create(&fileread, NULL, reading, "file.txt"); // Read The Words to The Same List by a Single Thread
-   pthread_join(fileread, NULL); // Join to Get Words Into Test Array
+   int pread = pthread_create(&fileread, NULL, reading, "file.txt"); // Read The Words to The Same List by a Single Thread
+   if (pread != 0){ // In Case Thread Create Fails
+      fprintf(stderr, "Reading Failed");
+      return 1;
+   }
+   int join = pthread_join(fileread, NULL); // Join to Get Words Into Test Array
+   if(join != 0){ // In Case Thread Join Fails
+      fprintf(stderr, "Join Failed");
+      return 1;
+   }
    struct arg_struct args; // Structure For The First Arguments
    args.arg1 = 0; // Setting it From 0
    args.arg2 = DIVIDED; // Setting it To Half of Total Since Two Threads
@@ -154,11 +162,18 @@ int main(){
    argss.arg1 = DIVIDED; // Setting it From Half of Total
    argss.arg2 = TOTAL; // Setting it To Total
    pthread_mutex_init(&mutex1,NULL); // Initializing Mutex
-   pthread_create(&tid[0], NULL, Mapping, (void *) &args); // First Thread, From 0 to Total/2
-   pthread_create(&tid[1], NULL, Mapping, (void *) &argss); // Second Thread, From Total/2 to Total
-
+   int pfirst = pthread_create(&tid[0], NULL, Mapping, (void *) &args); // First Thread, From 0 to Total/2
+   int psecond = pthread_create(&tid[1], NULL, Mapping, (void *) &argss); // Second Thread, From Total/2 to Total
+   if(pfirst != 0 || psecond != 0){ // In Case Thread Create Fails
+      fprintf(stderr, "Thread Create Failed");
+      return 1;
+   }
    for(int i = 0; i < THREADS; i++){ // Joining of The Threads
-      pthread_join(tid[i],NULL); // Joining
+      int join = pthread_join(tid[i],NULL); // Joining
+      if(join != 0){ // In Case Thread Join Fails
+         fprintf(stderr, "Join Failed");
+         return 1;
+      }
    }
    pthread_mutex_destroy(&mutex1); // Destroying Mutex
    LongestWord(storage); // Run Longest Word Function Using Result of Map
