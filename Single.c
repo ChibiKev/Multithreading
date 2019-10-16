@@ -2,10 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <pthread.h>
 
 #define TOTAL 50000000 // Total Number of Words in Text File
-#define THREADS 1 // Total Number of Threads
 #define MAXSTORE 20 // Total Number Going Into Map
 #define BUFSIZE 15 // BUFSIZE For Allocation
 
@@ -25,17 +23,9 @@ int storagecount[MAXSTORE] = {}; // Storage For The Map Function. Only Stores th
 char *most; // Most Word Appeared Goes Here
 int mostchar; // Total Count of Most Word Goes Here
 
-pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER; // Setting Up MUTEX
-
-struct arg_struct{ // Setting Up Struct For Mapping Argument. For Ranging (To Split Work For Threading)
-   int arg1; // First Argument, From.
-   int arg2; // Second Argument, To.
-};
-
-void *reading(void *arg){ // Read File Function
-   char *val_p = (char *)arg; // Extracting Parameters
+void reading(char *arg){ // Read File Function
    FILE *pointer_file; // Setting File Pointer
-   pointer_file = fopen(val_p, "r"); // Reading File
+   pointer_file = fopen(arg, "r"); // Reading File
    int i = 0; // Initialize Index of Array
    test[i] = malloc(BUFSIZE); // Allocating Array
    while(fgets(test[i], BUFSIZE,pointer_file) != NULL){ // Adding File Into Array
@@ -47,7 +37,6 @@ void *reading(void *arg){ // Read File Function
       }
    }
    fclose(pointer_file); // Close The File.
-   pthread_exit(0); // Exit Thread.
 }
 
 bool check(char* first, char* second){ // Check to See if Two Words Are Equal
@@ -68,33 +57,25 @@ bool check(char* first, char* second){ // Check to See if Two Words Are Equal
    return found; // Return Found, Either 0 or 1.
 }
 
-void *Mapping(void *arguments){ // Mapping Thread. Takes Argument From # to #.
-   struct arg_struct *args = arguments; // Extract Parameters
-   int firstarg = args -> arg1; // First Argument Extracted From Parameters.
-   int secondarg = args -> arg2; // Second Argument Extracted From Parameters.
+void Mapping(int firstarg, int secondarg){ // Mapping Function. Takes Argument From # to #.
    for(int i = firstarg; i < secondarg; i++){ // Run From First Argument To Second Argument.
       int found = 0; // Found is Set to False (0).
       for(int j = 0; j < store; j++){ // Check to See if It's Been Stored Into The Map Yet.
          bool value = check(storage[j],test[i]); // Check To See if It's Found in The Map.
          if(value){ // If It's Found in The Map, Storage
-            pthread_mutex_lock(&mutex1); // Critical Section
             storagecount[j]++; // Storage Count Increase by 1.
             free(test[i]); // Free the Allocation Where It's Been Found
-            pthread_mutex_unlock(&mutex1); // End of Critical Section
             found = 1; // Set Found to True (1).
             break; // Break Out Since It's Found.
          }  
       }
       if (found == 0){ // If It's Not Found
-         pthread_mutex_lock(&mutex1); // Critical Section
          storage[store]=test[i]; // Store Word Into Map, Storage.
          storagecount[store]++; // Set Up Count For The Word.
          store++; // Increase Number Stored in Storage.
-         pthread_mutex_unlock(&mutex1); // End of Critical Section.
       }
       
    }
-   pthread_exit(0); // Exit Thread.
 }
 
 void LongestWord(char* arr[]){ // Longest Word Function
@@ -142,35 +123,8 @@ void MostCommonWord(char* arr[]){ // Most Common Word Function
 }
 
 int main(){
-   pthread_t fileread; // Reading Thread
-   pthread_t tid[THREADS]; // Thread For Efficiency
-   int pread = pthread_create(&fileread, NULL, reading, "file.txt"); // Read The Words to The Same List by a Single Thread
-   if (pread != 0){ // In Case Thread Create Fails
-      fprintf(stderr, "Reading Failed");
-      return 1;
-   }
-   int join = pthread_join(fileread, NULL); // Join to Get Words Into Test Array
-   if(join != 0){ // In Case Thread Join Fails
-      fprintf(stderr, "Join Failed");
-      return 1;
-   }
-   struct arg_struct args; // Structure For The First Arguments
-   args.arg1 = 0; // Setting it From 0
-   args.arg2 = TOTAL; // Setting it To Half of Total Since Two Threads
-   pthread_mutex_init(&mutex1,NULL); // Initializing Mutex
-   int pfirst = pthread_create(&tid[0], NULL, Mapping, (void *) &args); // First Thread, From 0 to Total/2
-   if(pfirst != 0){ // In Case Thread Create Fails
-      fprintf(stderr, "Thread Create Failed");
-      return 1;
-   }
-   for(int i = 0; i < THREADS; i++){ // Joining of The Threads
-      int join = pthread_join(tid[i],NULL); // Joining
-      if(join != 0){ // In Case Thread Join Fails
-         fprintf(stderr, "Join Failed");
-         return 1;
-      }
-   }
-   pthread_mutex_destroy(&mutex1); // Destroying Mutex
+   reading("file.txt"); // Read Text File
+   Mapping(0,TOTAL); // Map the Text File
    LongestWord(storage); // Run Longest Word Function Using Result of Map
    ShortestWord(storage); // Run Shortest Word Function Using Result of Map
    MostCommonWord(storage); // Run Most Common Word Function Using Result of Map
